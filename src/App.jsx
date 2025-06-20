@@ -161,7 +161,7 @@ function App() {
       const selectedFile = e.target.files[0];
       if (!selectedFile || !client) return;
 
-      // Check if wallet is connected and contract is available
+      //wallet is connected and contract is available
       if (!address) {
         alert("Please connect your wallet first!");
         return;
@@ -182,7 +182,7 @@ function App() {
       setUploadProgress(0);
 
       try {
-        // Step 1: Upload to Web3.Storage (IPFS)
+        // Upload to Web3.Storage (IPFS)
         setUploadStage("ipfs");
         const progressInterval = setInterval(() => {
           setUploadProgress((prev) => {
@@ -201,7 +201,7 @@ function App() {
         clearInterval(progressInterval);
         setUploadProgress(50);
 
-        // Step 2: Upload file info to smart contract
+        // Upload file info to smart contract
         setUploadStage("blockchain");
         console.log("UPLOADING to smart contract...");
         
@@ -248,7 +248,6 @@ function App() {
         setUploadProgress(0);
         setUploadStage("");
         
-        // More specific error handling
         if (err.message.includes("User rejected")) {
           alert("Transaction was rejected by user.");
         } else if (err.message.includes("insufficient funds")) {
@@ -276,7 +275,7 @@ function App() {
   };
 
   return (
-    <div className="w-screen h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 relative flex items-center justify-center">
+    <div className="min-h-screen w-full min-w-[1535px] overflow-y-auto bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 relative flex items-center justify-center">
       {/* Background Patterns */}
       <div className="absolute inset-0 opacity-10">
         <div className="absolute top-20 left-20 w-72 h-72 bg-blue-500 rounded-full mix-blend-multiply filter blur-xl animate-pulse"></div>
@@ -547,13 +546,14 @@ function App() {
       </div>
 
       {/* Footer */}
-      <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 z-10">
-        <div className="backdrop-blur-md bg-white/5 border border-white/10 rounded-full px-4 py-2">
+        <div className="absolute bottom-6 right-6 z-10">
+          <div className="backdrop-blur-md bg-white/5 border border-white/10 rounded-full px-4 py-2">
           <p className="text-gray-400 text-sm font-light">Powered by Web3.Storage</p>
+          </div>
         </div>
-      </div>
     </div>
   );
 }
 
 export default App;
+
