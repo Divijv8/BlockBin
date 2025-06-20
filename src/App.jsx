@@ -22,7 +22,6 @@ function App() {
 
   const contract = getContractInstance();
   console.log("CONTRACT", contract);
-  // Changes
 
   const [client, setClient] = useState(null);
   const [cid, setCid] = useState("");
