@@ -95,14 +95,11 @@ npm run build    # Create production build
 ## 📸 Screenshots
 
 ### Upload Interface
-
-<!-- Optionally add an image here -->
-<!-- ![Upload Interface](./screenshots/upload.png) -->
+![Upload Interface](./SS/Screenshot_2025-06-21_114532.png)
 
 ### Files List
 
-<!-- Optionally add an image here -->
-<!-- ![Files List](./screenshots/files.png) -->
+![Files List](./SS/Screenshot_2025-06-21_114705.png)
 
 ---
 
