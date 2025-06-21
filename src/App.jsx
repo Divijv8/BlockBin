@@ -87,7 +87,21 @@ function App() {
     window.location.reload();
   };
 
-  // NEW FUNCTION TO GET FILES UPLOADED
+  // Helper function to check if a file is accessible on IPFS
+  const checkFileAccessibility = async (fileHash) => {
+    try {
+      const response = await fetch(`https://w3s.link/ipfs/${fileHash}`, {
+        method: 'HEAD', // Use HEAD request to check if file exists without downloading it
+        timeout: 5000 // 5 second timeout
+      });
+      return response.ok;
+    } catch (error) {
+      console.log(`File ${fileHash} is not accessible:`, error.message);
+      return false;
+    }
+  };
+
+  // UPDATED FUNCTION TO GET FILES WITH REAL-TIME VERIFICATION
   const getFilesUploaded = async () => {
     if (!contract || !address) {
       alert("Please connect your wallet first!");
@@ -95,6 +109,8 @@ function App() {
     }
 
     setIsGettingFiles(true);
+    setUploadedFiles([]); // Clear previous files
+    
     try {
       // Get total file count
       const count = await contract.read.fileCount();
@@ -103,47 +119,83 @@ function App() {
       console.log("Total files uploaded by contract:", totalFiles);
 
       // Get details of files uploaded by current user
-      // The files mapping is: files[address][index] => FileInfo
-      const files = [];
+      const contractFiles = [];
       let userFileIndex = 0;
       
-      // We need to iterate through user's files until we find all of them
-      // Since we don't know how many files the current user has uploaded,
-      // we'll try to fetch files until we get an error or empty response
+      // Get all files from contract first
       while (true) {
         try {
           const fileInfo = await contract.read.files([address, BigInt(userFileIndex)]);
           
-          // Check if we got a valid file (fileId > 0 means it exists)
           if (Number(fileInfo[0]) > 0) {
-            files.push({
-              id: Number(fileInfo[0]),           // fileId
-              fileHash: fileInfo[1],             // fileHash
-              fileSize: fileInfo[2],             // fileSize
-              fileType: fileInfo[3],             // fileType
-              fileName: fileInfo[4],             // fileName
-              timestamp: fileInfo[5],            // uploadTime
-              uploader: fileInfo[6]              // uploader
+            contractFiles.push({
+              id: Number(fileInfo[0]),
+              fileHash: fileInfo[1],
+              fileSize: fileInfo[2],
+              fileType: fileInfo[3],
+              fileName: fileInfo[4],
+              timestamp: fileInfo[5],
+              uploader: fileInfo[6]
             });
             userFileIndex++;
           } else {
-            // No more files for this user
             break;
           }
         } catch (error) {
-          // No more files or error occurred
           console.log(`Finished fetching files at index ${userFileIndex}`);
           break;
         }
       }
-      
-      console.log(`Found ${files.length} files for current user`);
-      setUploadedFiles(files);
-      setShowFilesList(true);
-      
-      if (files.length === 0) {
+
+      console.log(`Found ${contractFiles.length} files in contract for current user`);
+
+      if (contractFiles.length === 0) {
         alert("No files found for your address. Upload some files first!");
+        return;
       }
+
+      // Now verify which files are actually accessible on IPFS
+      console.log("Verifying file accessibility on IPFS...");
+      const accessibleFiles = [];
+      const inaccessibleFiles = [];
+
+      // Check accessibility for each file
+      for (const file of contractFiles) {
+        const isAccessible = await checkFileAccessibility(file.fileHash);
+        
+        if (isAccessible) {
+          accessibleFiles.push({
+            ...file,
+            status: 'accessible'
+          });
+        } else {
+          inaccessibleFiles.push({
+            ...file,
+            status: 'inaccessible'
+          });
+        }
+      }
+
+      console.log(`${accessibleFiles.length} files are accessible, ${inaccessibleFiles.length} files are inaccessible`);
+
+      // Set only accessible files, but you can also show inaccessible ones with a warning
+      const allFiles = [
+        ...accessibleFiles,
+        ...inaccessibleFiles.map(file => ({
+          ...file,
+          status: 'inaccessible'
+        }))
+      ];
+
+      setUploadedFiles(allFiles);
+      setShowFilesList(true);
+
+      if (accessibleFiles.length === 0 && inaccessibleFiles.length > 0) {
+        alert(`Found ${inaccessibleFiles.length} files in blockchain records, but none are currently accessible on IPFS. They may have been deleted from Web3.Storage.`);
+      } else if (inaccessibleFiles.length > 0) {
+        alert(`Found ${accessibleFiles.length} accessible files and ${inaccessibleFiles.length} files that are no longer available on IPFS.`);
+      }
+
     } catch (err) {
       console.error("Error getting files:", err);
       alert(`Failed to get files: ${err.message}`);
@@ -217,12 +269,11 @@ function App() {
         }, 300);
 
         // Call smart contract uploadFile function
-        // Parameters: _fileHash, _fileSize, _fileType, _fileName
         const uploadTxn = await contract.write.uploadFile([
-          uploadedCid.toString(),        // _fileHash (CID from IPFS)
-          selectedFile.size.toString(),  // _fileSize
-          selectedFile.type || "unknown", // _fileType
-          selectedFile.name              // _fileName
+          uploadedCid.toString(),
+          selectedFile.size.toString(),
+          selectedFile.type || "unknown",
+          selectedFile.name
         ]);
 
         console.log("Transaction sent:", uploadTxn);
@@ -473,10 +524,10 @@ function App() {
                         href={`https://w3s.link/ipfs/${file.fileHash}`}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="inline-flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-blue-500 to-purple-500 text-white rounded-lg hover:from-blue-600 hover:to-purple-600 transition-all duration-300 text-sm font-medium"
+                        className="inline-flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-blue-500 to-purple-500 rounded-lg hover:from-blue-600 hover:to-purple-600 transition-all duration-300 text-sm font-medium text-white" // <-- add text-white here
                       >
-                        <span>View</span>
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <span className="text-white">View</span>
+                        <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
                         </svg>
                       </a>
@@ -551,6 +602,12 @@ function App() {
           <p className="text-gray-400 text-sm font-light">Powered by Web3.Storage</p>
           </div>
         </div>
+        <div className="absolute bottom-6 left-6 z-10">
+          <div className="backdrop-blur-md bg-white/5 border border-white/10 rounded-full px-4 py-2">
+          <p className="text-gray-400 text-sm font-light">Made by Divij</p>
+          </div>
+        </div>
+
     </div>
   );
 }
