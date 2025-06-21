@@ -46,7 +46,12 @@ function App() {
   const [uploadedFiles, setUploadedFiles] = useState([]);
   const [showFilesList, setShowFilesList] = useState(false);
 
+  // NEW STATES FOR EMAIL LOGIN
+  const [email, setEmail] = useState("");
+  const [showEmailDialog, setShowEmailDialog] = useState(true);
+
   useEffect(() => {
+    if (!isValidEmail(email)) return; // Wait for valid email input
     const setup = async () => {
       setIsInitializing(true);
       setInitError(null);
@@ -56,7 +61,7 @@ function App() {
         const w3upClient = await create();
         console.log("Client created, attempting login...");
 
-        await w3upClient.login("divijvermav8@gmail.com");
+        await w3upClient.login(email);
         console.log("Login successful!");
 
         setClient(w3upClient);
@@ -79,7 +84,7 @@ function App() {
     };
 
     setup();
-  }, []);
+  }, [email]); // rerun when email changes
 
   const retryInitialization = () => {
     setClient(null);
@@ -112,17 +117,17 @@ function App() {
     setUploadedFiles([]); // Clear previous files
     
     try {
-      // Get total file count
+      // total file count
       const count = await contract.read.fileCount();
       const totalFiles = Number(count);
       setFileCount(totalFiles);
       console.log("Total files uploaded by contract:", totalFiles);
 
-      // Get details of files uploaded by current user
+      // details of files uploaded by current user
       const contractFiles = [];
       let userFileIndex = 0;
       
-      // Get all files from contract first
+      // all files from contract
       while (true) {
         try {
           const fileInfo = await contract.read.files([address, BigInt(userFileIndex)]);
@@ -154,7 +159,7 @@ function App() {
         return;
       }
 
-      // Now verify which files are actually accessible on IPFS
+      // verify which files accessible on IPFS
       console.log("Verifying file accessibility on IPFS...");
       const accessibleFiles = [];
       const inaccessibleFiles = [];
@@ -178,7 +183,7 @@ function App() {
 
       console.log(`${accessibleFiles.length} files are accessible, ${inaccessibleFiles.length} files are inaccessible`);
 
-      // Set only accessible files, but you can also show inaccessible ones with a warning
+      // show inaccessible ones with a warning
       const allFiles = [
         ...accessibleFiles,
         ...inaccessibleFiles.map(file => ({
@@ -325,8 +330,39 @@ function App() {
     return new Date(Number(timestamp) * 1000).toLocaleString();
   };
 
+  // helper function
+  const isValidEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+
   return (
     <div className="min-h-screen w-full min-w-[1535px] overflow-y-auto bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 relative flex items-center justify-center">
+      {/* Email Dialog */}
+      {showEmailDialog && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
+          <div className="bg-white rounded-2xl shadow-xl p-8 max-w-xs w-full flex flex-col items-center">
+            <h2 className="text-xl font-semibold mb-4 text-gray-800">Enter your email</h2>
+            <input
+              type="email"
+              className="border border-gray-300 rounded-lg px-4 py-2 w-full mb-4 focus:outline-none focus:ring-2 focus:ring-blue-400 text-black" // <-- add text-black here
+              placeholder="your@email.com"
+              value={email}
+              onChange={e => setEmail(e.target.value)}
+              onKeyDown={e => {
+                if (e.key === "Enter" && isValidEmail(email)) setShowEmailDialog(false);
+              }}
+              autoFocus
+              required
+            />
+            <button
+              className="bg-blue-600 text-white px-6 py-2 rounded-lg font-medium hover:bg-blue-700 transition"
+              disabled={!isValidEmail(email)}
+              onClick={() => setShowEmailDialog(false)}
+            >
+              Continue
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Background Patterns */}
       <div className="absolute inset-0 opacity-10">
         <div className="absolute top-20 left-20 w-72 h-72 bg-blue-500 rounded-full mix-blend-multiply filter blur-xl animate-pulse"></div>
