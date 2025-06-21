@@ -64,6 +64,18 @@ function App() {
         await w3upClient.login(email);
         console.log("Login successful!");
 
+        // Select the first available space after login
+        let selectedSpace = null;
+        for await (const space of w3upClient.spaces()) {
+          selectedSpace = space;
+          break;
+        }
+        if (!selectedSpace) {
+          throw new Error("No Web3.Storage spaces found for this account. Please create a space in your Web3.Storage dashboard.");
+        }
+        await w3upClient.setCurrentSpace(selectedSpace.did());
+        console.log("Space selected:", selectedSpace.did());
+
         setClient(w3upClient);
       } catch (error) {
         console.error("Failed to setup w3up client:", error);
